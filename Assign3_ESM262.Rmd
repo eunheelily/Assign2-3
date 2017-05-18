@@ -1,0 +1,76 @@
+---
+title: "Assign3_ESM262"
+author: "Eunhee Lee"
+date: "May 17, 2017"
+output: html_document
+---
+# data formating 
+```{r eval=TRUE, echo=TRUE, warning=FALSE}
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(lubridate)
+library(grid)
+library(gridExtra)
+
+
+thinshallow = read.table("~/desktop/ESM262/resthin.shallow.txt", header=T)
+thindeep = read.table("~/desktop/ESM262/resthin.deep.txt", header=T)
+clim=read.table("~/desktop/ESM262/sierraclim.txt",header=T)
+clim <- clim[,2:6]
+climtem <- aggregate(clim, by=list(clim$month, clim$year), FUN="mean")
+climrain <- aggregate(clim, by=list(clim$month, clim$year), FUN="sum")
+climtem <-climtem[,1:4]
+colnames(climtem) = c("month","year","tmin","tmax")
+climrain <-climrain[,c(1,2,5)]
+colnames(climrain) = c("month", "year","monthrain")
+climtotal <- merge(climrain, climtem, by=c("year","month"))
+
+climtotal <- subset(climtotal, year == 1950 | year==1960 | year== 1970| year== 1980)
+
+
+library(ggplot2)
+thin <- aggregate(thindeep, by=list(thindeep$scen, thindeep$month), FUN="sum")
+thin <- thin[,c(1,2,10)]
+colnames(thin) = c("year","month","evap")
+evaprain <- merge(thin, climtotal, by=c("year","month"))
+```
+
+### ggplot 1 
+```{r eval=TRUE, echo=TRUE, warning=FALSE}
+climp1 <- ggplot(evaprain)+geom_bar(aes(x=year, y=evap), stat="summary", fun.y="mean",  fill="lightgreen") +ylab("Evaporation and Precipitation (mm/month)")+xlab("Year")
+climp1 = climp1 +geom_line(aes(x=year, y=monthrain), stat="summary", fun.y="mean",  col="blue", lwd=2)
+scl = 20
+climp1 = climp1+ geom_line(aes(x=year, y=tmax*scl), stat="summary", fun.y="mean", col="red", lwd=2)
+climp1 = climp1+scale_y_continuous(sec.axis = sec_axis(~./scl, name=expression(paste("Maximum Temperature ",C**degree)))) 
+climp1 = climp1+ annotate("text", x=1975, y=150, label="Precipitation", colour="blue", size=6, hjust=0.5)
+climp1 = climp1 + annotate("text", x=1945, y=230, label="Temperature", colour="red", size=6, hjust=0)
+climp1 = climp1 + annotate("text", x=1960, y=50, label="Evaporation", colour="darkgreen", size=6, hjust=0) + theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+climp1
+```
+
+###ggplot 2
+```{r eval=TRUE, echo=TRUE, warning=FALSE}
+
+climp2 = ggplot(evaprain)+geom_line(aes(x=month, y=evap, col=as.factor(year)), lwd=2)+ggtitle("Change in monthly evaporation over interested years")+theme(plot.title=element_text(hjust=0.5),legend.position="bottom",legend.title=element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())+ylab("Evaporation (mm/month)")+xlab("Month")+scale_color_brewer(type="qual", palette="Set3") 
+
+climp2
+```
+
+
+
+###ggplot 3
+```{r eval=TRUE, echo=TRUE, warning=FALSE}
+climp3 = ggplot(evaprain)+geom_boxplot(aes(x=as.factor(month), y=evap, col=as.factor(year)))+ggtitle("Change in monthly evaporation over interested years")+theme(plot.title=element_text(hjust=0.5),legend.position="bottom",legend.title=element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())+ylab("Evaporation (mm/month)")+xlab("Month")+scale_fill_brewer(type="qual", palette="Set3") 
+climp3
+```
+
+
+###ggplot 4
+```{r eval=TRUE, echo=TRUE, warning=FALSE}
+
+climp4 = ggplot(subset(thinshallow,thin==0.05), aes(x=evap, y=plantc, color=scen))+geom_point(size=2)+geom_smooth(data=thinshallow,aes(x=evap, y=plantc, color=scen), method=lm, se=FALSE, lwd=2)+ggtitle("Relationship between evaporation and plant carbon for the tree with thin of 0.05")+theme(plot.title=element_text(hjust=0.5),legend.title=element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())+ylab("Plant carbon")+xlab("Evaporation (mm/month)")
+climp4
+```
+
